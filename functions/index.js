@@ -68,11 +68,44 @@ app.post("/scream", (req, res) => {
     });
 });
 
+const isEmpty = string => {
+  if (string.trim() === "") return true;
+  return false;
+};
+
+const isEmail = email => {
+  const regEx = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  if (email.match(regEx)) return true;
+  return false;
+};
+
 // Signup route
 app.post("/signup", (req, res) => {
   const { email, password, confirmPassword, handle } = req.body;
 
   /// TODO: validate data
+  let errors = {};
+  if (isEmpty(email)) {
+    errors.email = "Email must not be empty";
+  } else if (!isEmail(email)) {
+    errors.email = "Email must not be valid email address";
+  }
+
+  if (isEmpty(password)) {
+    errors.password = "Password must not be empty";
+  }
+
+  if (password !== confirmPassword) {
+    errors.confirmPassword = "Password must not be same";
+  }
+
+  if (isEmpty(handle)) {
+    errors.handle = "Handle must not be empty";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json(errors);
+  }
 
   let token, userId;
   db.doc(`/users/${handle}`)
@@ -109,6 +142,52 @@ app.post("/signup", (req, res) => {
       ) {
         return res.status(400).json({
           email: err.message
+        });
+      } else {
+        return res.status(500).json({ error: err.code });
+      }
+    });
+});
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  let errors = {};
+  if (isEmpty(email)) {
+    errors.email = "Email must not be empty";
+  } else if (!isEmail(email)) {
+    errors.email = "Email must not be valid email address";
+  }
+
+  if (isEmpty(password)) {
+    errors.password = "Password must not be empty";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json(errors);
+  }
+
+  firebase
+    .auth()
+    .signInWithEmailAndPassword(email, password)
+    .then(data => {
+      return data.user.getIdToken();
+    })
+    .then(token => {
+      return res.json({ token });
+    })
+    .catch(err => {
+      console.error(err);
+      if (
+        err.code === "auth/invalid-email" ||
+        err.code === "auth/user-disabled" ||
+        err.code === "auth/wrong-password"
+      ) {
+        return res.status(403).json({
+          email: err.message
+        });
+      } else if (err.code === "auth/user-not-found") {
+        return res.status(404).json({
+          email: "The email is not found"
         });
       } else {
         return res.status(500).json({ error: err.code });
