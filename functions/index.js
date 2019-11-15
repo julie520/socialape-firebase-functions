@@ -48,10 +48,54 @@ app.get("/screams", (req, res) => {
     });
 });
 
-app.post("/scream", (req, res) => {
+const FirebaseAuth = (req, res, next) => {
+  let idToken;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    idToken = req.headers.authorization.split("Bearer ")[1];
+  } else {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+// idToken comes from the client app
+admin.auth().verifyIdToken(idToken)
+  .then(function(decodedToken) {
+    let uid = decodedToken.uid;
+    // ...
+  }).catch(function(error) {
+    // Handle error
+  });
+
+
+  admin
+    .auth()
+    .verifyIdToken(idToken)
+    .then(decodedToken => {
+      let uid = decodedToken.uid;
+      req.user = decodedToken;
+      req.user.id = uid;
+      return db
+        .collection("users")
+        .where("userId", "==", uid)
+        .limit(1)
+        .get();
+    })
+    .then(data => {
+      req.user.handle = data.docs[0].data().handle;
+      return next();
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(403).json({ error: "Unauthorized" });
+    });
+};
+
+app.post("/scream", FirebaseAuth, (req, res) => {
   const newScream = {
     body: req.body.body,
-    userHandle: req.body.userHandle,
+    userHandle: req.user.handle,
     createdAt: new Date().toISOString()
   };
 
