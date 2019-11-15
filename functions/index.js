@@ -1,5 +1,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const express = require("express");
 const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
@@ -7,22 +8,22 @@ admin.initializeApp({
   databaseURL: "https://social-ape-9cc19.firebaseio.com"
 });
 
-// // Create and Deploy Your First Cloud Functions
-// // https://firebase.google.com/docs/functions/write-firebase-functions
-//
-exports.helloWorld = functions.https.onRequest((request, response) => {
-  response.send("Hello world!");
-});
+const app = express();
 
-exports.getScreams = functions.https.onRequest((req, res) => {
+app.get("/screams", (req, res) => {
   admin
     .firestore()
     .collection("screams")
+    .orderBy("createdAt", "desc")
     .get()
     .then(data => {
       let screams = [];
       data.forEach(doc => {
-        screams.push(doc.data());
+        screams.push({
+          screamId: doc.id,
+          createdAt: doc.data().createdAt,
+          ...doc.data()
+        });
       });
       return res.json(screams);
     })
@@ -34,11 +35,11 @@ exports.getScreams = functions.https.onRequest((req, res) => {
     });
 });
 
-exports.createScream = functions.https.onRequest((req, res) => {
+app.post("/scream", (req, res) => {
   const newScream = {
     body: req.body.body,
     userHandle: req.body.userHandle,
-    createdAt: admin.firestore.Timestamp.fromDate(new Date())
+    createdAt: new Date().toISOString()
   };
 
   admin
@@ -55,3 +56,6 @@ exports.createScream = functions.https.onRequest((req, res) => {
       });
     });
 });
+
+// https://baseurl.com/api/
+exports.api = functions.region("asia-east2").https.onRequest(app);
