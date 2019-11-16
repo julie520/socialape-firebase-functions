@@ -4,10 +4,12 @@ const serviceAccount = require("../serviceAccountKey.json");
 
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET
 });
 
 const fbDb = fbAdmin.firestore();
+const bucket = fbAdmin.storage().bucket();
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
@@ -23,4 +25,4 @@ firebase.initializeApp(firebaseConfig);
 
 const fbAuth = firebase.auth();
 
-module.exports = { fbAdmin, fbDb, fbAuth };
+module.exports = { fbAdmin, fbDb, fbAuth, bucket };
