@@ -6,7 +6,15 @@ require("dotenv").config();
 const { auth } = require("./util/middleware");
 
 // controller
-const { getScreams, addScream } = require("./controllers/screams");
+const {
+  getScreams,
+  addScream,
+  getScream,
+  addComment,
+  likeScream,
+  unlikeScream,
+  deleteScream
+} = require("./controllers/screams");
 const {
   signup,
   login,
@@ -18,6 +26,11 @@ const {
 // screams routes
 app.get("/screams", getScreams);
 app.post("/scream", auth, addScream);
+app.get("/scream/:screamId", getScream);
+app.delete("/scream/:screamId", auth, deleteScream);
+app.post("/scream/:screamId/comment", auth, addComment);
+app.post("/scream/:screamId/like", auth, likeScream);
+app.post("/scream/:screamId/unlike", auth, unlikeScream);
 
 // users route
 app.post("/signup", signup);

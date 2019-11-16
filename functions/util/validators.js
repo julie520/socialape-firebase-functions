@@ -4,12 +4,12 @@ const isEmpty = val => {
 };
 
 const isNull = val => {
-  if (val === null || val === undefined) return true;
+  if (val === undefined || val === null) return true;
   return false;
 };
 
 const isNullOrEmpty = val => {
-  if (val === null || val === undefined) return true;
+  if (val === undefined || val === null) return true;
   if (val.trim() === "") return true;
   return false;
 };
@@ -88,5 +88,27 @@ exports.reduceUserDetail = data => {
   return {
     userDetails,
     valid: Object.keys(userDetails).length > 0
+  };
+};
+
+exports.validateScreamId = val => {
+  return {
+    valid: !isNullOrEmpty(val)
+  };
+};
+
+exports.validateAddComment = (val, data) => {
+  const { body } = data;
+  let errors = {};
+  if (isNullOrEmpty(val)) {
+    errors.scream = "Scream not found";
+  }
+  if (isNullOrEmpty(body)) {
+    errors.body = "Please send comment";
+  }
+
+  return {
+    errors,
+    valid: Object.keys(errors).length === 0
   };
 };
