@@ -1,9 +1,13 @@
-const { fbDb, fbAuth, bucket } = require("../util/firebase");
-const { validateSignup, validateLogin } = require("../util/validators");
 const BusBoy = require("busboy");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
+const { fbDb, fbAuth, bucket } = require("../util/firebase");
+const {
+  validateSignup,
+  validateLogin,
+  reduceUserDetail
+} = require("../util/validators");
 
 exports.signup = (req, res) => {
   const { errors, valid } = validateSignup(req.body);
@@ -94,6 +98,61 @@ exports.login = (req, res) => {
     });
 };
 
+exports.updateUerDetails = (req, res) => {
+  const { userDetails, valid } = reduceUserDetail(req.body);
+
+  if (!valid) {
+    return res.status(400).json({ error: "There is no user details" });
+  }
+
+  console.log("userDetails", userDetails);
+
+  fbDb
+    .doc(`/users/${req.user.handle}`)
+    .update(userDetails)
+    .then(() => res.json({ message: "Details updated successfully" }))
+    .catch(err => {
+      console.error("ADD UER DETAILS ERROR", err);
+      return res.status(500).json({ error: err.code });
+    });
+};
+
+exports.getUserDetails = (req, res) => {
+  let userData = {};
+  fbDb
+    .doc(`/users/${req.user.handle}`)
+    .get()
+    .then(doc => {
+      if (doc.exists) {
+        userData.credentials = doc.data();
+        return fbDb
+          .collection("likes")
+          .where("userHandle", "==", req.user.handle)
+          .get();
+      } else {
+        return res.status(400).json({ error: "User not found" });
+      }
+    })
+    .then(data => {
+      userData.likes = [];
+      if (data === undefined || data === null || data.length === 0) {
+        return res.json(userData);
+      } else {
+        data.forEach(doc => {
+          userData.likes.push(doc.data());
+        });
+        return res.json(userData);
+      }
+    })
+    .catch(err => {
+      console.error("GET USER DETAILS ERROR", err);
+      return res
+        .status(500)
+        .json({ error: "There are some problems. Please try it again. " });
+    });
+};
+
+// upload profile user image
 exports.uploadImage = (req, res) => {
   const busboy = new BusBoy({ headers: req.headers });
 

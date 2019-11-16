@@ -7,7 +7,13 @@ const { auth } = require("./util/middleware");
 
 // controller
 const { getScreams, addScream } = require("./controllers/screams");
-const { signup, login, uploadImage } = require("./controllers/users");
+const {
+  signup,
+  login,
+  uploadImage,
+  updateUerDetails,
+  getUserDetails
+} = require("./controllers/users");
 
 // screams routes
 app.get("/screams", getScreams);
@@ -16,7 +22,9 @@ app.post("/scream", auth, addScream);
 // users route
 app.post("/signup", signup);
 app.post("/login", login);
-app.post("/user/image",auth,uploadImage);
+app.post("/user/image", auth, uploadImage);
+app.get("/user", auth, getUserDetails);
+app.post("/user", auth, updateUerDetails);
 
 // https://baseurl.com/api/
 exports.api = functions.region("asia-east2").https.onRequest(app);

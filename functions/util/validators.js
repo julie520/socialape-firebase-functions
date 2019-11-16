@@ -1,5 +1,16 @@
-const isEmpty = string => {
-  if (string.trim() === "") return true;
+const isEmpty = val => {
+  if (val.trim() === "") return true;
+  return false;
+};
+
+const isNull = val => {
+  if (val === null || val === undefined) return true;
+  return false;
+};
+
+const isNullOrEmpty = val => {
+  if (val === null || val === undefined) return true;
+  if (val.trim() === "") return true;
   return false;
 };
 
@@ -54,5 +65,28 @@ exports.validateLogin = data => {
   return {
     errors,
     valid: Object.keys(errors).length === 0
+  };
+};
+
+exports.reduceUserDetail = data => {
+  const { bio, website, location } = data;
+  let userDetails = {};
+
+  if (!isNull(bio)) userDetails.bio = bio.trim();
+
+  if (!isNull(website)) {
+    // https://website.com
+    userDetails.website = website.trim();
+    if (
+      userDetails.website.indexOf(".") !== -1 &&
+      userDetails.website.substring(0, 4) !== "http"
+    ) {
+      userDetails.website = `https://${userDetails.website}`;
+    }
+  }
+  if (!isNull(location)) userDetails.location = location.trim();
+  return {
+    userDetails,
+    valid: Object.keys(userDetails).length > 0
   };
 };
