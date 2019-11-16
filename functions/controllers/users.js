@@ -6,7 +6,8 @@ const { fbDb, fbAuth, bucket } = require("../util/firebase");
 const {
   validateSignup,
   validateLogin,
-  reduceUserDetail
+  reduceUserDetail,
+  validateParam
 } = require("../util/validators");
 
 exports.signup = (req, res) => {
@@ -123,26 +124,73 @@ exports.getUserDetails = (req, res) => {
     .doc(`/users/${req.user.handle}`)
     .get()
     .then(doc => {
-      if (doc.exists) {
+      if (!doc.exists) {
+        return res.status(400).json({ error: "User not found" });
+      } else {
         userData.credentials = doc.data();
         return fbDb
           .collection("likes")
           .where("userHandle", "==", req.user.handle)
           .get();
-      } else {
-        return res.status(400).json({ error: "User not found" });
       }
     })
     .then(data => {
       userData.likes = [];
-      if (data === undefined || data === null || data.length === 0) {
-        return res.json(userData);
+
+      data.forEach(doc => {
+        userData.likes.push(doc.data());
+      });
+
+      return fbDb
+        .collection("notifications")
+        .orderBy("createdAt", "desc")
+        .where("recipient", "==", req.user.handle)
+        .limit(10)
+        .get();
+    })
+    .then(docRef => {
+      userData.notifications = [];
+      docRef.forEach(doc => {
+        userData.notifications.push({ notiId: doc.id, ...doc.data() });
+      });
+      return res.json(userData);
+    })
+    .catch(err => {
+      console.error("GET USER DETAILS ERROR", err);
+      return res
+        .status(500)
+        .json({ error: "There are some problems. Please try it again. " });
+    });
+};
+
+exports.getHandleDetails = (req, res) => {
+  const { valid } = validateParam(req.params.handle);
+  if (!valid) return res.status(404).json({ error: "User not found" });
+
+  let userData = {};
+
+  fbDb
+    .doc(`/users/${req.params.handle}`)
+    .get()
+    .then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({ error: "User not found" });
       } else {
-        data.forEach(doc => {
-          userData.likes.push(doc.data());
-        });
-        return res.json(userData);
+        userData.user = doc.data();
+        return fbDb
+          .collection("screams")
+          .orderBy("createdAt", "desc")
+          .where("userHandle", "==", req.params.handle)
+          .get();
       }
+    })
+    .then(data => {
+      userData.screams = [];
+      data.forEach(doc => {
+        userData.screams.push({ screamId: doc.id, ...doc.data() });
+      });
+
+      return res.json(userData);
     })
     .catch(err => {
       console.error("GET USER DETAILS ERROR", err);
@@ -201,4 +249,24 @@ exports.uploadImage = (req, res) => {
       });
   });
   busboy.end(req.rawBody);
+};
+
+exports.markNotificationsRead = (req, res) => {
+  if (req.body === undefined || req.body === null || req.body === "") {
+    return res.status(400).json({ error: "Please send notifications" });
+  }
+  let batch = fbDb.batch();
+  req.body.forEach(notiId => {
+    const notification = fbDb.doc(`/notifications/${notiId}`);
+    batch.update(notification, { read: true });
+  });
+  batch
+    .commit()
+    .then(() => {
+      return res.json({ message: "Notifications marked read!" });
+    })
+    .catch(err => {
+      console.log("MARK NOTIFICATIONS READ ERROR", err);
+      return res.status(500).json({ error: "Something went wrong!" });
+    });
 };

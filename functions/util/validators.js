@@ -91,7 +91,7 @@ exports.reduceUserDetail = data => {
   };
 };
 
-exports.validateScreamId = val => {
+exports.validateParam = val => {
   return {
     valid: !isNullOrEmpty(val)
   };

@@ -1,5 +1,5 @@
 const { fbDb } = require("../util/firebase");
-const { validateScreamId, validateAddComment } = require("../util/validators");
+const { validateParam, validateAddComment } = require("../util/validators");
 
 exports.getScreams = (req, res) => {
   fbDb
@@ -51,7 +51,7 @@ exports.addScream = (req, res) => {
 };
 
 exports.getScream = (req, res) => {
-  const { valid } = validateScreamId(req.params.screamId);
+  const { valid } = validateParam(req.params.screamId);
 
   if (!valid) return res.status(404).json({ error: "Scream not found" });
 
@@ -129,7 +129,7 @@ exports.addComment = (req, res) => {
 };
 
 exports.likeScream = (req, res) => {
-  const { valid } = validateScreamId(req.params.screamId);
+  const { valid } = validateParam(req.params.screamId);
   if (!valid) return res.status(404).json({ error: "Scream not found" });
 
   const likeDoc = fbDb
@@ -181,7 +181,7 @@ exports.likeScream = (req, res) => {
 };
 
 exports.unlikeScream = (req, res) => {
-  const { valid } = validateScreamId(req.params.screamId);
+  const { valid } = validateParam(req.params.screamId);
   if (!valid) return res.status(404).json({ error: "Scream not found" });
 
   const likeDoc = fbDb
@@ -228,7 +228,7 @@ exports.unlikeScream = (req, res) => {
 };
 
 exports.deleteScream = (req, res) => {
-  const { valid } = validateScreamId(req.params.screamId);
+  const { valid } = validateParam(req.params.screamId);
   if (!valid) return res.status(404).json({ error: "Scream not found" });
 
   const screamDoc = fbDb.doc(`/screams/${req.params.screamId}`);
