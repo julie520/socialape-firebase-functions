@@ -56,8 +56,10 @@ exports.createNotificationOnLike = functions
       .doc(`/screams/${snapshot.data().screamId}`)
       .get()
       .then(doc => {
-        if (!doc.exists) return;
-        else {
+        if (
+          doc.exists &&
+          doc.data().userHandle !== snapshot.data().userHandle
+        ) {
           return fbDb.doc(`/notifications/${snapshot.id}`).set({
             recipient: doc.data().userHandle,
             sender: snapshot.data().userHandle,
@@ -68,12 +70,8 @@ exports.createNotificationOnLike = functions
           });
         }
       })
-      .then(() => {
-        return;
-      })
       .catch(err => {
         console.log("CREATE NOTIFICATION ON LIKE ERROR", err);
-        return;
       });
   });
 
@@ -84,12 +82,8 @@ exports.deleteNotificationOnUnlike = functions
     fbDb
       .doc(`/notifications/${snapshot.id}`)
       .delete()
-      .then(() => {
-        return;
-      })
       .catch(err => {
         console.log("DELETE NOTIFICATION ON UNLIKE ERROR", err);
-        return;
       });
   });
 
@@ -101,8 +95,10 @@ exports.createNotificationOnComment = functions
       .doc(`/screams/${snapshot.data().screamId}`)
       .get()
       .then(doc => {
-        if (!doc.exists) return;
-        else {
+        if (
+          doc.exists &&
+          doc.data().userHandle !== snapshot.data().userHandle
+        ) {
           return fbDb.doc(`/notifications/${snapshot.id}`).set({
             recipient: doc.data().userHandle,
             sender: snapshot.data().userHandle,
@@ -113,11 +109,66 @@ exports.createNotificationOnComment = functions
           });
         }
       })
-      .then(() => {
-        return;
-      })
       .catch(err => {
         console.log("CREATE NOTIFICATION ON COMMENT ERROR", err);
-        return;
       });
   });
+
+exports.onUserImageChange = functions
+  .region("asia-east2")
+  .firestore.document("/users/{userId}")
+  .onUpdate(change => {
+    console.log("before", change.before.data());
+    console.log("after", change.after.data());
+    if (change.before.data().imageUrl !== change.after.data().imageUrl) {
+      console.log("ON USER IMAGE CHANGE","Image has changed")
+      let batch = fbDb.batch();
+      return fbDb
+        .collection("screams")
+        .where("userHandle", "==", change.before.data().handle)
+        .get()
+        .then(data => {
+          data.forEach(doc => {
+            const scream = fbDb.doc(`/screams/${doc.id}`);
+            batch.update(scream, { userImage: change.after.data().imageUrl });
+          })          
+          return fbDb
+          .collection("comments")
+          .where("userHandle", "==", change.before.data().handle)
+          .get();
+        })
+        .then(data => {
+          data.forEach(doc => {
+            const comment = fbDb.doc(`/comments/${doc.id}`);
+            batch.update(comment, { userImage: change.after.data().imageUrl });
+          })  
+          return batch.commit()
+        });
+    } else return true;
+  });
+
+  exports.onSreamDelete = functions.region("asia-east2").firestore.document("/screams/{screamId}")
+  .onDelete((snapshot, context) => {
+    const screamId = context.params.screamId
+    const batch = fbDb.batch()
+    return fbDb.collection("comments").where("screamId","==",screamId).get()
+    .then(data => {
+      data.forEach(doc => {
+        batch.delete(fbDb.doc(`/comments/${doc.id}`))
+      })
+      return fbDb.collection("likes").where("screamId","==",screamId).get()
+    })
+    .then(data => {
+      data.forEach(doc => {
+        batch.delete(fbDb.doc(`/likes/${doc.id}`))
+      })
+      return fbDb.collection("notifications").where("screamId","==",screamId).get()
+    })
+    .then(data => {
+      data.forEach(doc => {
+        batch.delete(fbDb.doc(`/notifications/${doc.id}`))
+      })
+      return batch.commit()
+    })
+    .catch(err => console.log("ON SCREAM DELETE ERROR", err));
+  })

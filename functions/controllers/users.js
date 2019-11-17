@@ -58,7 +58,7 @@ exports.signup = (req, res) => {
           email: err.message
         });
       } else {
-        return res.status(500).json({ error: err.code });
+        return res.status(500).json({ general: 'Something went wrong, please try again.' });
       }
     });
 };
@@ -94,7 +94,7 @@ exports.login = (req, res) => {
           email: "The email is not found"
         });
       } else {
-        return res.status(500).json({ error: err.code });
+        return res.status(500).json({ general: 'Something went wrong, please try again.' });
       }
     });
 };

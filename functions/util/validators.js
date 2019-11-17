@@ -104,7 +104,7 @@ exports.validateAddComment = (val, data) => {
     errors.scream = "Scream not found";
   }
   if (isNullOrEmpty(body)) {
-    errors.body = "Please send comment";
+    errors.body = "Must not be empty";
   }
 
   return {
